@@ -37,39 +37,35 @@ class CCJob(MRJob):
         yield key, value
       self.increment_counter('commoncrawl', 'processed_records', 1)
 
-TWITTER_PATTERN = re.compile("twitter\.com\/[a-zA-Z0-9_]{1,15}\/?\Z")
-YOUTUBE_PATTERN = re.compile("youtube\.com\/user\/[a-zA-Z0-9]{1,20}\/?\Z")
-INSTAGRAM_PATTERN = re.compile("instagram\.com\/[a-zA-Z0-9_.]{1,30}\/?\Z")
+SOCIAL_PROFILE_REGEX = re.compile("|".join([
+  "twitter\.com\/[a-zA-Z0-9_]{1,15}\/?\Z",
+  "youtube\.com\/user\/[a-zA-Z0-9]{1,20}\/?\Z",
+  "instagram\.com\/[a-zA-Z0-9_.]{1,30}\/?\Z",
+  "vine\.co\/[a-zA-Z0-9_.]{1,30}\/?\Z",
+  "pinterest\.com\/[a-zA-Z0-9_.]{1,30}\/?\Z",
+  "soundcloud\.com\/[a-zA-Z0-9_.\-]{1,30}\/?\Z",
+  "twitch\.tv\/[a-zA-Z0-9_.\-]{1,30}\/profile\/?\Z"
+]))
+
+VALID_DOMAIN_REGEX = re.compile("|".join([
+  'twitter\.com',
+  'youtube\.com',
+  'instagram\.com',
+  'vine\.co',
+  'pinterest\.com',
+  'soundcloud\.com',
+  'twitch\.tv'
+]))
 
 class SocialSparkRegexJob(CCJob):
   def process_record(self, record):
     if record['Content-Type'] == 'application/http; msgtype=response':
       url = record["WARC-Target-URI"]
+      domain = urlparse(url).netloc
 
-      found = False
-      if INSTAGRAM_PATTERN.findall(url):
-        found = True
-      elif TWITTER_PATTERN.findall(url):
-        found = True
-      elif YOUTUBE_PATTERN.findall(url):
-        found = True
-      '''
-      elif "facebook.com" in url and "facebook.com" in domain:
-        found = True
-      elif "soundcloud.com" in url and "soundcloud.com" in domain:
-        found = True
-      elif "twitch.tv" in url and "twitch.tv" in domain:
-        found = True
-      elif "pinterest.com" in url and "pinterest.com" in domain:
-        found = True
-      elif "vine.co" in url and "vine.co" in domain:
-        found = True
-      '''
-
-      if found:
+      if VALID_DOMAIN_REGEX.findall(domain) and SOCIAL_PROFILE_REGEX.findall(url):
         payload = record.payload.read()
         headers, body = payload.split('\r\n\r\n', 1)
-        domain = urlparse(url).netloc
         yield domain, tuple([{url:body}])
         self.increment_counter('commoncrawl', 'processed_pages', 1)
 
