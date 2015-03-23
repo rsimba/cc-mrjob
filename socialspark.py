@@ -20,7 +20,12 @@ class CCJob(MRJob):
   def mapper(self, _, line):
     f = None
     ## If we're on EC2 or running on a Hadoop cluster, pull files via S3
-    if self.options.runner in ['emr', 'hadoop']:
+    print self.options.runner
+    # Because mrjob is not detecting self.options.runner on emr, change logic
+    # to detect if run locally 
+
+    if self.options.runner is not "inline":
+    #if self.options.runner in ['emr', 'hadoop']:
       # Connect to Amazon S3 using anonymous credentials
       conn = boto.connect_s3(anon=True)
       pds = conn.get_bucket('aws-publicdatasets')
